@@ -19,7 +19,7 @@ def d_Ldual(xx,yy,a,x,y):
 	return 1-ret
 
 #最急降下法
-def SDM(a,data,eta=0.01):
+def SDM(a,data,eta=0.01,C=1):
 	change = 1
 	y = np.array(data.cls)
 	x = np.array(pd.concat([data.x1,data.x2],axis=1))
@@ -31,7 +31,7 @@ def SDM(a,data,eta=0.01):
 		for aa,xx,yy in zip(a,x,y):
 			if aa != 0:
 				dif = d_Ldual(xx,yy,a,x,y)
-				new_a.append(max(0,aa+eta*dif))
+				new_a.append(min(C,max(0,aa+eta*dif)))
 				change += dif**2
 			else:
 				new_a.append(0)
@@ -41,7 +41,7 @@ def SDM(a,data,eta=0.01):
 	return np.array(a)
 
 #未定乗数を用いて重みを算出
-def calc_weight(a,data):
+def calc_weight(a,data,C=1):
 	y = np.array(data.cls)
 	x = np.array(pd.concat([data.x1,data.x2],axis=1))
 	w = np.array([.0,.0])
@@ -49,7 +49,7 @@ def calc_weight(a,data):
 	w0 = 0
 	for aa,yy,xx in zip(a,y,x):
 		w += aa*yy*xx
-		if aa != 0:
+		if aa > 0 and aa < C:
 			tmp = 0
 			for aaa,yyy,xxx in zip(a,y,x):
 				if aa != 0:
@@ -59,19 +59,17 @@ def calc_weight(a,data):
 	return(w,w0)
 
 print("read data.")
-df = pd.read_csv("fishDataEasy_train.csv")
+df = pd.read_csv("fishDataDifficult_train.csv")
 #print(df)
 print("preprocessing")
 scale_df = scale_data(df.copy())
 a = np.ones(len(scale_df))
 print("SDM")
-a = SDM(a,scale_df)
+a = SDM(a,scale_df,C=1)
 print("calc_weight")
-w,w0 = calc_weight(a,scale_df)
+w,w0 = calc_weight(a,scale_df,C=1)
 print(w,w0)
 
-#plt.xlim(-3,3)
-#plt.ylim(-4,5)
 x_fig = np.linspace(scale_df.x1.min()-0.5,scale_df.x1.max()+0.5,100)
 y_fig = -(w[0]/w[1])*x_fig -(w0/w[1])
 plt.scatter(scale_df[scale_df['cls']==1].x1,scale_df[scale_df['cls']==1].x2,color='r')
